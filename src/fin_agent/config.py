@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 if not Path(PROJECT_ROOT / "pyproject.toml").exists():
-    raise("Project root path is missing")
+    raise("Отсутствует путь проекта")
 
 
 class ConfigBase(BaseSettings):
