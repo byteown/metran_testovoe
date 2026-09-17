@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from fin_agent.config import get_settings
+from fin_agent.rag.chunks import split_document
+from fin_agent.rag.index import DocumentIndex
 from fin_agent.schemas import Answer, AskRequest, Status
 from fin_agent.storage.db import load_database
 
@@ -17,6 +19,12 @@ async def lifespan(app: FastAPI):
     conn, problems = load_database()
     app.state.db = conn
     app.state.load_warnings = problems
+    chunks = [
+        c
+        for p in sorted(get_settings().data.docs_path.glob("*.md"))
+        for c in split_document(p)
+    ]
+    app.state.index = DocumentIndex(chunks, get_settings().rag.model)
     yield
     conn.close()
 

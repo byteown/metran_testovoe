@@ -1,23 +1,15 @@
 import difflib
 import re
 import sqlite3
-from dataclasses import dataclass, field
 
-from fin_agent.schemas import Calculation, DataSource, Source
+from fin_agent.schemas import Calculation, DataSource
+from fin_agent.tools.base import ToolResult
 
 ROW_LIMIT = 100
 MAX_TERMS = 10
 LEGAL_FORMS = {"ооо", "оао", "зао", "пао", "ао", "ип"}
 ACCOUNT_ALIASES = {"62": "62.01", "62.01": "62.01", "60": "60.01", "60.01": "60.01"}
 DATA_FROM, DATA_TO = "2026-01-01", "2026-07-31"
-
-
-@dataclass
-class ToolResult:
-    rows: list[dict]
-    calculations: list[Calculation] = field(default_factory=list)
-    sources: list[Source] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
 
 
 def _normalize(name: str) -> str:

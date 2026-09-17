@@ -3,6 +3,7 @@ import sqlite3
 import pytest
 
 from fin_agent.tools import finance
+from fin_agent.tools.rag import _is_verbatim, search_regulations
 
 
 def test_receivables_for_counterparty(conn):
@@ -24,3 +25,10 @@ def test_unknown_counterparty_returns_nothing(conn):
 def test_database_is_read_only(conn):
     with pytest.raises(sqlite3.OperationalError, match="readonly"):
         conn.execute("DELETE FROM receivables")
+
+
+def test_rag_answer_contains_verbatim_quote(index):
+    result = search_regulations(index, "Что делать при просрочке дебиторки 45 дней?")
+    assert result.sources
+    for source in result.sources:
+        assert _is_verbatim(source.quote, source.file)

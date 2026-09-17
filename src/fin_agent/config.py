@@ -58,11 +58,20 @@ class LogSettings(ConfigBase):
     log_level: str
 
 
+class RagSettings(ConfigBase):
+    model_config = SettingsConfigDict(env_prefix="RAG_")
+
+    model: str
+    top_k: int
+    min_score: float
+
+
 class Settings(BaseSettings):
     llm: LLMSettings = Field(default_factory=LLMSettings)
     agent: AgentSettings = Field(default_factory=AgentSettings)
     data: DataSettings = Field(default_factory=DataSettings)
     log: LogSettings = Field(default_factory=LogSettings)
+    rag: RagSettings = Field(default_factory=RagSettings)
 
 
 @lru_cache(maxsize=1, typed=False)
