@@ -19,6 +19,7 @@ class Calculation(BaseModel):
     result: float
     currency: str = "RUB"
 
+
 class DataSource(BaseModel):
     type: Literal["data"] = "data"
     file: str

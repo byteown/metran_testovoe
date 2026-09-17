@@ -5,7 +5,6 @@ from datetime import date, timedelta
 
 from fin_agent.config import get_settings
 
-logging.basicConfig(level=get_settings().log.log_level)
 logger = logging.getLogger(__name__)
 
 CHECK_TOLERANCE = 0.01  # допуск в одну копейку
@@ -14,15 +13,29 @@ CHECK_TOLERANCE = 0.01  # допуск в одну копейку
 def _issued_row(r: dict) -> tuple:
     due = date.fromisoformat(r["date"]) + timedelta(days=int(r["term_days"]))
     return (
-        r["number"], r["date"], r["counterparty"], float(r["amount"]), int(r["term_days"]), r["status"],
-        float(r["paid"]), due.isoformat(),
+        r["number"],
+        r["date"],
+        r["counterparty"],
+        float(r["amount"]),
+        int(r["term_days"]),
+        r["status"],
+        float(r["paid"]),
+        due.isoformat(),
     )
 
 
 def _payment_row(r: dict) -> tuple:
     invoice_no = r["purpose"].split()[-1]
     direction = "in" if invoice_no.startswith("СБ") else "out"
-    return r["number"], r["date"], r["counterparty"], float(r["amount"]), r["purpose"], invoice_no, direction
+    return (
+        r["number"],
+        r["date"],
+        r["counterparty"],
+        float(r["amount"]),
+        r["purpose"],
+        invoice_no,
+        direction,
+    )
 
 
 def _scalar(conn: sqlite3.Connection, sql: str, params: tuple = ()) -> float | None:
@@ -47,11 +60,17 @@ def _verify_totals(conn: sqlite3.Connection) -> list[str]:
     compare(
         "Обороты Дт 62.01 (выставлено покупателям)",
         _scalar(conn, "SELECT SUM(amount) AS v FROM invoices_issued"),
-        _scalar(conn, "SELECT turnover_dt AS v FROM account_balances WHERE account = ?", ("62.01",)),
+        _scalar(
+            conn,
+            "SELECT turnover_dt AS v FROM account_balances WHERE account = ?",
+            ("62.01",),
+        ),
     )
 
     balance_62 = _scalar(
-        conn, "SELECT balance_end_dt AS v FROM account_balances WHERE account = ?", ("62.01",)
+        conn,
+        "SELECT balance_end_dt AS v FROM account_balances WHERE account = ?",
+        ("62.01",),
     )
     compare(
         "Сальдо Дт 62.01 (остаток по счетам)",
@@ -68,7 +87,11 @@ def _verify_totals(conn: sqlite3.Connection) -> list[str]:
     compare(
         "Обороты Кт 60.01 (счета поставщиков)",
         _scalar(conn, "SELECT SUM(amount) AS v FROM invoices_received"),
-        _scalar(conn, "SELECT turnover_ct AS v FROM account_balances WHERE account = ?", ("60.01",)),
+        _scalar(
+            conn,
+            "SELECT turnover_ct AS v FROM account_balances WHERE account = ?",
+            ("60.01",),
+        ),
     )
 
     return problems
@@ -94,8 +117,15 @@ def load_database():
                  """)
     with open(path / "account_balances.csv", encoding="utf-8", newline="") as f:
         rows = [
-            (r["account"], float(r["balance_start_dt"]), float(r["balance_start_ct"]), float(r["turnover_dt"]),
-             float(r["turnover_ct"]), float(r["balance_end_dt"]), float(r["balance_end_ct"]))
+            (
+                r["account"],
+                float(r["balance_start_dt"]),
+                float(r["balance_start_ct"]),
+                float(r["turnover_dt"]),
+                float(r["turnover_ct"]),
+                float(r["balance_end_dt"]),
+                float(r["balance_end_ct"]),
+            )
             for r in csv.DictReader(f)
         ]
     conn.executemany("INSERT INTO account_balances VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
@@ -133,10 +163,10 @@ def load_database():
                  )
                  """)
     with open(path / "invoices_issued.csv", encoding="utf-8", newline="") as f:
-        rows = [
-            _issued_row(r) for r in csv.DictReader(f)
-        ]
-    conn.executemany("INSERT INTO invoices_issued VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows)
+        rows = [_issued_row(r) for r in csv.DictReader(f)]
+    conn.executemany(
+        "INSERT INTO invoices_issued VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows
+    )
     conn.commit()
 
     conn.execute("""
@@ -153,10 +183,10 @@ def load_database():
                  )
                  """)
     with open(path / "invoices_received.csv", encoding="utf-8", newline="") as f:
-        rows = [
-            _issued_row(r) for r in csv.DictReader(f)
-        ]
-    conn.executemany("INSERT INTO invoices_received VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows)
+        rows = [_issued_row(r) for r in csv.DictReader(f)]
+    conn.executemany(
+        "INSERT INTO invoices_received VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows
+    )
     conn.commit()
 
     conn.execute("""
@@ -172,9 +202,7 @@ def load_database():
                  )
                  """)
     with open(path / "payments.csv", encoding="utf-8", newline="") as f:
-        rows = [
-            _payment_row(r) for r in csv.DictReader(f)
-        ]
+        rows = [_payment_row(r) for r in csv.DictReader(f)]
     conn.executemany("INSERT INTO payments VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
     conn.commit()
 
@@ -192,8 +220,15 @@ def load_database():
                  """)
     with open(path / "receivables.csv", encoding="utf-8", newline="") as f:
         rows = [
-            (r["counterparty"], r["contract"], r["invoice"], float(r["amount"]), r["invoice_date"],
-             int(r["overdue_days"]), r["status"])
+            (
+                r["counterparty"],
+                r["contract"],
+                r["invoice"],
+                float(r["amount"]),
+                r["invoice_date"],
+                int(r["overdue_days"]),
+                r["status"],
+            )
             for r in csv.DictReader(f)
         ]
     conn.executemany("INSERT INTO receivables VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
