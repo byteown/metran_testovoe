@@ -84,8 +84,17 @@ class AccountTurnoverArgs(BaseModel):
     account: Literal["62", "62.01", "60", "60.01"] = Field(
         description="62.01 — расчёты с покупателями, 60.01 — расчёты с поставщиками."
     )
-    date_from: str = Field(pattern=ISO_DATE, description="Начало периода, ГГГГ-ММ-ДД.")
-    date_to: str = Field(pattern=ISO_DATE, description="Конец периода, ГГГГ-ММ-ДД.")
+    date_from: str = Field(
+        pattern=ISO_DATE,
+        description="Начало периода, ГГГГ-ММ-ДД. «За квартал» означает границы самого "
+                    "квартала, а не период с начала года. Кварталы 2026: "
+                    "Q1 = 2026-01-01, Q2 = 2026-04-01, Q3 = 2026-07-01, Q4 = 2026-10-01.",
+    )
+    date_to: str = Field(
+        pattern=ISO_DATE,
+        description="Конец периода, ГГГГ-ММ-ДД. Кварталы 2026: Q1 = 2026-03-31, "
+                    "Q2 = 2026-06-30, Q3 = 2026-09-30, Q4 = 2026-12-31.",
+    )
 
 
 class SearchRegulationsArgs(BaseModel):
