@@ -2,11 +2,12 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from starlette.responses import JSONResponse
+from fastapi.responses import JSONResponse
 
+from fin_agent.config import get_settings
 from fin_agent.schemas import Answer, AskRequest, Status
 
-
+logging.basicConfig(level=get_settings().log.log_level)
 logger = logging.getLogger(__name__)
 
 
@@ -34,4 +35,4 @@ async def ask(request: AskRequest) -> Answer:
 async def on_error(request, exc: Exception) -> JSONResponse:
     logger.exception("Необработанная ошибка")
     body = Answer(answer="Внутренняя ошибка сервиса", status=Status.ERROR)
-    return JSONResponse(status_code=500, content=body.model_dump())
+    return JSONResponse(status_code=500, content=body.model_dump(mode="json"))

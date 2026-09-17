@@ -184,8 +184,10 @@ dependencies = [
     { name = "httpx" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "sentence-transformers" },
+    { name = "starlette" },
     { name = "typer" },
     { name = "uvicorn" },
 ]
@@ -200,8 +202,10 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "numpy", specifier = ">=2.4.6" },
+    { name = "pydantic", specifier = ">=2.13.5" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "sentence-transformers", specifier = ">=6.0.1" },
+    { name = "starlette", specifier = ">=1.6.0" },
     { name = "typer", specifier = ">=0.27.2" },
     { name = "uvicorn", specifier = ">=0.53.0" },
 ]

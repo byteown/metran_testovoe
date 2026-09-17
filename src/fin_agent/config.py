@@ -1,11 +1,10 @@
 from datetime import date
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated
 
 from pydantic import DirectoryPath, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -53,10 +52,15 @@ class DataSettings(ConfigBase):
         return p if p.is_absolute() else PROJECT_ROOT / p
 
 
+class LogSettings(ConfigBase):
+    log_level: str
+
+
 class Settings(BaseSettings):
     llm: LLMSettings = Field(default_factory=LLMSettings)
     agent: AgentSettings = Field(default_factory=AgentSettings)
     data: DataSettings = Field(default_factory=DataSettings)
+    log: LogSettings = Field(default_factory=LogSettings)
 
 
 @lru_cache(maxsize=1, typed=False)
