@@ -28,10 +28,17 @@ class LLMClient:
     def close(self) -> None:
         self._client.close()
 
-    def chat(self, messages: list[dict], tools: list[dict] | None = None) -> dict:
+    def chat(
+            self,
+            messages: list[dict],
+            tools: list[dict] | None = None,
+            tool_choice: str | None = None,
+    ) -> dict:
         payload: dict = {"model": self._model, "messages": messages}
         if tools:
             payload["tools"] = tools
+            if tool_choice:
+                payload["tool_choice"] = tool_choice
 
         last_error: Exception | None = None
         for attempt in range(self._max_retries + 1):

@@ -114,7 +114,8 @@ def run_agent(question: str, ctx: ToolContext, client: LLMClient) -> AgentResult
 
     try:
         for turn in range(settings.agent.max_turns):
-            response = client.chat(messages, tools=TOOLS_SPEC)
+            tool_choice = "required" if turn == 0 else None
+            response = client.chat(messages, tools=TOOLS_SPEC, tool_choice=tool_choice)
             trace.turns = turn + 1
             prompt_tokens, completion_tokens = client.usage(response)
             trace.prompt_tokens += prompt_tokens
@@ -124,6 +125,17 @@ def run_agent(question: str, ctx: ToolContext, client: LLMClient) -> AgentResult
             tool_calls = message.get("tool_calls") or []
 
             if not tool_calls:
+                if not tool_results and turn + 1 < settings.agent.max_turns:
+                    logger.info("Модель ответила без инструмента, требуем повтор")
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": "Ты не вызвал ни одного инструмента. "
+                                       "Выбери подходящий инструмент и вызови его, "
+                                       "прежде чем отвечать.",
+                        }
+                    )
+                    continue
                 final_text = (message.get("content") or "").strip()
                 break
 
