@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -34,7 +34,7 @@ class DocumentSource(BaseModel):
 
 
 Source = Annotated[
-    Union[DataSource, DocumentSource],
+    DataSource | DocumentSource,
     Field(discriminator="type"),
 ]
 

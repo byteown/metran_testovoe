@@ -3,7 +3,7 @@ import re
 import sqlite3
 from dataclasses import dataclass, field
 
-from fin_agent.schemas import Calculation, Source, DataSource
+from fin_agent.schemas import Calculation, DataSource, Source
 
 ROW_LIMIT = 100
 MAX_TERMS = 10
@@ -33,8 +33,12 @@ def _expression(amounts: list[float]) -> str:
     return shown
 
 
-def get_receivables(conn: sqlite3.Connection, counterparty: str | None = None, only_overdue: bool = False,
-                    min_overdue_days: int | None = None) -> ToolResult:
+def get_receivables(
+        conn: sqlite3.Connection,
+        counterparty: str | None = None,
+        only_overdue: bool = False,
+        min_overdue_days: int | None = None,
+) -> ToolResult:
     conditions: list[str] = []
     params: list = []
 
@@ -59,23 +63,33 @@ def get_receivables(conn: sqlite3.Connection, counterparty: str | None = None, o
 
     result = ToolResult(
         rows=rows,
-        calculations=[Calculation(
-            operation="sum",
-            expression=_expression(amounts),
-            result=total,
-        )],
-        sources=[DataSource(
-            file="receivables.csv",
-            record_ids=[r["invoice"] for r in rows],
-        )],
+        calculations=[
+            Calculation(
+                operation="sum",
+                expression=_expression(amounts),
+                result=total,
+            )
+        ],
+        sources=[
+            DataSource(
+                file="receivables.csv",
+                record_ids=[r["invoice"] for r in rows],
+            )
+        ],
     )
     if len(rows) == ROW_LIMIT:
         result.warnings.append(f"Показаны первые {ROW_LIMIT} записей, сумма неполная")
     return result
 
 
-def search_invoices(conn: sqlite3.Connection, direction: str, status: str | None = None, due_from: str | None = None,
-                    due_to: str | None = None, counterparty: str | None = None) -> ToolResult:
+def search_invoices(
+        conn: sqlite3.Connection,
+        direction: str,
+        status: str | None = None,
+        due_from: str | None = None,
+        due_to: str | None = None,
+        counterparty: str | None = None,
+) -> ToolResult:
     if direction == "issued":
         table = "invoices_issued"
     elif direction == "received":
@@ -116,16 +130,24 @@ def search_invoices(conn: sqlite3.Connection, direction: str, status: str | None
         rows=rows,
         calculations=[
             Calculation(operation="sum", expression=_expression(amounts), result=total),
-            Calculation(operation="unpaid_sum", expression=_expression(remainders), result=unpaid)
+            Calculation(
+                operation="unpaid_sum",
+                expression=_expression(remainders),
+                result=unpaid,
+            ),
         ],
-        sources=[DataSource(file=f"{table}.csv", record_ids=[r["number"] for r in rows])],
+        sources=[
+            DataSource(file=f"{table}.csv", record_ids=[r["number"] for r in rows])
+        ],
     )
     if len(rows) == ROW_LIMIT:
         result.warnings.append(f"Показаны первые {ROW_LIMIT} записей, суммы неполные")
     return result
 
 
-def top_debtors(conn: sqlite3.Connection, limit: int = 5, by: str = "overdue") -> ToolResult:
+def top_debtors(
+        conn: sqlite3.Connection, limit: int = 5, by: str = "overdue"
+) -> ToolResult:
     limit = max(1, min(limit, 50))
 
     if by == "overdue":
@@ -149,15 +171,20 @@ def top_debtors(conn: sqlite3.Connection, limit: int = 5, by: str = "overdue") -
         amounts = [float(a) for a in r.pop("amounts").split(",")]
         r["total"] = round(r["total"], 2)
 
-        calculations.append(Calculation(
-            operation="sum",
-            expression=f"{r['counterparty']}: {_expression(amounts)}",
-            result=r["total"],
-        ))
+        calculations.append(
+            Calculation(
+                operation="sum",
+                expression=f"{r['counterparty']}: {_expression(amounts)}",
+                result=r["total"],
+            )
+        )
         record_ids.extend(invoices)
 
-    return ToolResult(rows=rows, calculations=calculations,
-                      sources=[DataSource(file="receivables.csv", record_ids=record_ids)])
+    return ToolResult(
+        rows=rows,
+        calculations=calculations,
+        sources=[DataSource(file="receivables.csv", record_ids=record_ids)],
+    )
 
 
 def find_counterparty(conn: sqlite3.Connection, name: str) -> ToolResult:
@@ -165,7 +192,12 @@ def find_counterparty(conn: sqlite3.Connection, name: str) -> ToolResult:
     if not query:
         return ToolResult(rows=[], warnings=["Пустое название контрагента"])
 
-    all_rows = [dict(r) for r in conn.execute("SELECT name, inn, type, region, manager FROM counterparties").fetchall()]
+    all_rows = [
+        dict(r)
+        for r in conn.execute(
+            "SELECT name, inn, type, region, manager FROM counterparties"
+        ).fetchall()
+    ]
     index = {_normalize(r["name"]): r for r in all_rows}
 
     if query in index:
@@ -180,34 +212,58 @@ def find_counterparty(conn: sqlite3.Connection, name: str) -> ToolResult:
     if not matches:
         return ToolResult(rows=[])
 
-    result = ToolResult(rows=matches,
-                        sources=[DataSource(file="counterparties.csv", record_ids=[r["inn"] for r in matches])])
+    result = ToolResult(
+        rows=matches,
+        sources=[
+            DataSource(
+                file="counterparties.csv", record_ids=[r["inn"] for r in matches]
+            )
+        ],
+    )
     if len(matches) > 1:
         result.warnings.append("Найдено несколько контрагентов, уточните название")
     return result
 
 
-def account_turnover(conn: sqlite3.Connection, account: str, date_from: str, date_to: str) -> ToolResult:
+def account_turnover(
+        conn: sqlite3.Connection, account: str, date_from: str, date_to: str
+) -> ToolResult:
     def side(spec: tuple[str, str, str]) -> tuple[str, str, list[dict]]:
         file_name, label, sql = spec
-        rows = [dict(r) for r in conn.execute(sql, (date_from, date_to, ROW_LIMIT)).fetchall()]
+        rows = [
+            dict(r)
+            for r in conn.execute(sql, (date_from, date_to, ROW_LIMIT)).fetchall()
+        ]
         return file_name, label, rows
 
     key = ACCOUNT_ALIASES.get(account.strip())
     if key is None:
-        return ToolResult(rows=[], warnings=[
-            f"Счет {account!r} не поддерживается, доступные: 62.01, 60.01"
-        ])
+        return ToolResult(
+            rows=[],
+            warnings=[f"Счет {account!r} не поддерживается, доступные: 62.01, 60.01"],
+        )
     if key == "62.01":
-        debit = ("invoices_issued.csv", "выставлено покупателям",
-                 "SELECT number, date, counterparty, amount FROM invoices_issued WHERE date BETWEEN ? AND ? ORDER BY date LIMIT ?")
-        credit = ("payments.csv", "оплачено покупателями",
-                  "SELECT number, date, counterparty, amount FROM payments WHERE direction = 'in' AND date BETWEEN ? AND ? ORDER BY date LIMIT ?")
+        debit = (
+            "invoices_issued.csv",
+            "выставлено покупателям",
+            "SELECT number, date, counterparty, amount FROM invoices_issued WHERE date BETWEEN ? AND ? ORDER BY date LIMIT ?",
+        )
+        credit = (
+            "payments.csv",
+            "оплачено покупателями",
+            "SELECT number, date, counterparty, amount FROM payments WHERE direction = 'in' AND date BETWEEN ? AND ? ORDER BY date LIMIT ?",
+        )
     else:
-        credit = ("invoices_issued.csv", "выставлено покупателям",
-                  "SELECT number, date, counterparty, amount FROM invoices_issued WHERE date BETWEEN ? AND ? ORDER BY date LIMIT ?")
-        debit = ("payments.csv", "оплачено покупателями",
-                 "SELECT number, date, counterparty, amount FROM payments WHERE direction = 'in' AND date BETWEEN ? AND ? ORDER BY date LIMIT ?")
+        credit = (
+            "invoices_issued.csv",
+            "выставлено покупателям",
+            "SELECT number, date, counterparty, amount FROM invoices_issued WHERE date BETWEEN ? AND ? ORDER BY date LIMIT ?",
+        )
+        debit = (
+            "payments.csv",
+            "оплачено покупателями",
+            "SELECT number, date, counterparty, amount FROM payments WHERE direction = 'in' AND date BETWEEN ? AND ? ORDER BY date LIMIT ?",
+        )
 
     debit_file, debit_label, debit_rows = side(debit)
     credit_file, credit_label, credit_rows = side(credit)
@@ -216,26 +272,36 @@ def account_turnover(conn: sqlite3.Connection, account: str, date_from: str, dat
     credit_amounts = [r["amount"] for r in credit_rows]
 
     result = ToolResult(
-        rows=[{
-            "account": key,
-            "period": f"{date_from}..{date_to}",
-            "turnover_debit": round(sum(debit_amounts), 2),
-            "turnover_credit": round(sum(credit_amounts), 2),
-            "debit_documents": len(debit_rows),
-            "credit_documents": len(credit_rows),
-        }],
+        rows=[
+            {
+                "account": key,
+                "period": f"{date_from}..{date_to}",
+                "turnover_debit": round(sum(debit_amounts), 2),
+                "turnover_credit": round(sum(credit_amounts), 2),
+                "debit_documents": len(debit_rows),
+                "credit_documents": len(credit_rows),
+            }
+        ],
         calculations=[
-            Calculation(operation="turnover_debit", expression=f"{debit_label}: {_expression(debit_amounts)}",
-                        result=round(sum(debit_amounts), 2)),
-            Calculation(operation="turnover_credit", expression=f"{credit_label}: {_expression(credit_amounts)}",
-                        result=round(sum(credit_amounts), 2)),
+            Calculation(
+                operation="turnover_debit",
+                expression=f"{debit_label}: {_expression(debit_amounts)}",
+                result=round(sum(debit_amounts), 2),
+            ),
+            Calculation(
+                operation="turnover_credit",
+                expression=f"{credit_label}: {_expression(credit_amounts)}",
+                result=round(sum(credit_amounts), 2),
+            ),
         ],
         sources=[
             DataSource(file=debit_file, record_ids=[r["number"] for r in debit_rows]),
-            DataSource(file=credit_file, record_ids=[r["number"] for r in credit_rows])
+            DataSource(file=credit_file, record_ids=[r["number"] for r in credit_rows]),
         ],
     )
 
     if date_from < DATA_FROM or date_to > DATA_TO:
-        result.warnings.append(f"Запрошенный период выходит за границы, обороты неполные")
+        result.warnings.append(
+            "Запрошенный период выходит за границы, обороты неполные"
+        )
     return result
